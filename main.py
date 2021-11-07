@@ -36,6 +36,7 @@ class Driver:
         self.SAVE_PATH = f"output/{self.RUN_DATE}/{self.RUN_UUID}"
 
     def make_save_dir(self):
+        makedirs(name="output", exist_ok=True)
         makedirs(name=self.SAVE_PATH, exist_ok=True)
 
     @staticmethod
