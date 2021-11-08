@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from threading import Thread
 from os import makedirs
 import pandas as pd
+import gc
 
 
 class Driver:
@@ -34,83 +35,45 @@ class Driver:
         self.RUN_DATE = datetime.now().strftime('%Y-%m-%d')
         self.RUN_UUID = str(uuid4()).split('-')[0]
         self.SAVE_PATH = f"output/{self.RUN_DATE}/{self.RUN_UUID}"
+        self.obj = ""
+        self.st = ""
+        self.et = ""
+        self.rt = ""
+        self.mm = ""
+        self.cu = ""
 
     def make_save_dir(self):
         makedirs(name="output", exist_ok=True)
         makedirs(name=self.SAVE_PATH, exist_ok=True)
 
-    @staticmethod
-    def run_sha256(string):
-        obj = RunSha256(data_stream=string).run
+    def clear_memory(self):
+        del self.obj
+        del self.st
+        del self.et
+        del self.rt
+        del self.mm
+        del self.cu
+        gc.collect()
+
+    def run_algo(self, obj):
+        self.clear_memory()
+        self.obj = obj
         # Running time
-        st = datetime.now()
-        obj()
-        et = datetime.now()
-        rt = (et - st).microseconds
-        # Memory Used
-        mm = max(memory_usage(obj))
-
-        # CPU Usage
-        t = Thread(target=obj)
-        cu = (Process(t.start()).cpu_percent()) * 100
-        t.join()
-
-        return rt, mm, cu
-
-    @staticmethod
-    def run_sha512(string):
-        obj = RunSha512(data_stream=string).run
-        # Running time
-        st = datetime.now()
-        obj()
-        et = datetime.now()
-        rt = (et - st).microseconds
-        # Memory Used
-        mm = max(memory_usage(obj))
-
-        # CPU Usage
-        t = Thread(target=obj)
-        cu = (Process(t.start()).cpu_percent()) * 100
-        t.join()
-
-        return rt, mm, cu
-
-    @staticmethod
-    def run_md5(string):
-        obj = RunMd5(data_stream=string).run
-        # Run time
-        st = datetime.now()
-        obj()
-        et = datetime.now()
-        rt = (et - st).microseconds
+        self.st = datetime.now()
+        self.obj()
+        self.et = datetime.now()
+        self.rt = (self.et - self.st).microseconds
 
         # Memory Used
-        mm = max(memory_usage(obj))
+        # self.mm = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        self.mm = max(memory_usage(self.obj))
 
         # CPU Usage
-        t = Thread(target=obj)
-        cu = (Process(t.start()).cpu_percent()) * 100
+        t = Thread(target=self.obj)
+        self.cu = (Process(t.start()).cpu_percent()) * 100
         t.join()
 
-        return rt, mm, cu
-
-    @staticmethod
-    def run_blake(string):
-        obj = RunBlake(data_stream=string).run
-        # Run time
-        st = datetime.now()
-        obj()
-        et = datetime.now()
-        rt = (et - st).microseconds
-        # Memory Used
-        mm = max(memory_usage(obj))
-
-        # CPU Usage
-        t = Thread(target=obj)
-        cu = (Process(t.start()).cpu_percent()) * 100
-        t.join()
-
-        return rt, mm, cu
+        return self.rt, self.mm, self.cu
 
     def runtime_vs_is(self):
         plt.plot(self.KEYS, self.SHA256_T, "-o")
@@ -178,20 +141,24 @@ class Driver:
             string = bytes(generate_rand_bytes(size=key))
 
             # SHA 256
+            sha_256_obj = RunSha256(data_stream=string).run
             print(f"\t[+] Running Sha256 Algorithm on a {key} sized input")
-            sha256_rt, sha256_mm, sha256_cu = self.run_sha256(string)
+            sha256_rt, sha256_mm, sha256_cu = self.run_algo(obj=sha_256_obj)
 
             # SHA 512
+            sha_512_obj = RunSha512(data_stream=string).run
             print(f"\t[+] Running Sha512 Algorithm on a {key} sized input")
-            sha512_rt, sha512_mm, sha512_cu = self.run_sha512(string)
+            sha512_rt, sha512_mm, sha512_cu = self.run_algo(obj=sha_512_obj)
 
             # MD5
+            md5_obj = RunMd5(data_stream=string).run
             print(f"\t[+] Running MD5 Algorithm on a {key} sized input")
-            md5_rt, md5_mm, md5_cu = self.run_md5(string)
+            md5_rt, md5_mm, md5_cu = self.run_algo(obj=md5_obj)
 
             # Blake
+            blake_obj = RunBlake(data_stream=string).run
             print(f"\t[+] Running Blake Algorithm on a {key} sized input")
-            blake_rt, blake_mm, blake_cu = self.run_blake(string)
+            blake_rt, blake_mm, blake_cu = self.run_algo(obj=blake_obj)
 
             # Populating graphing  arrays
             self.KEYS.append(key)
@@ -243,6 +210,8 @@ class Driver:
 
         # saving RUN to json
         self.save_run_to_json()
+
+        print(f"\n\n[+] All files successfully generated and stored at {self.SAVE_PATH}")
 
 
 if __name__ == "__main__":
